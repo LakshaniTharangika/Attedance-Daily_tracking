@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attendance & Task Tracker</title>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+      background-color: #8db1d665;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #4CAF50;
+    }
+
+    #login-page, #user-page {
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-btn {
+      background-color: #3949ab;
+      color: white;
+      padding: 20px 40px;
+      border-radius: 10px;
+      font-size: 18px;
+      border: none;
+      margin: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .user-btn:hover {
+      background-color: #303f9f;
+    }
+
+    input, select, button {
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      max-width: 300px;
+    }
+
+    button {
+      background-color: #2196F3;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    td {
+      background-color: #f9f9f9;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background-color: #ff9800;
+      color: white;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+      background-color: #f57c00;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .present {
+      background-color: #c8e6c9 !important;
+    }
+
+    .absent {
+      background-color: #ffcdd2 !important;
+    }
+
+    .none {
+      background-color: #ffffff !important;
+    }
+
+    select {
+      width: 100%;
+      padding: 6px;
+    }
+
+    /* MOBILE RESPONSIVE STYLES */
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+
+      .user-btn {
+        width: 100%;
+        font-size: 16px;
+        padding: 15px;
+      }
+
+      #login-page h3,
+      #user-page h3 {
+        font-size: 20px;
+      }
+
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+
+      table tr {
+        margin-bottom: 15px;
+        border-bottom: 2px solid #ddd;
+      }
+
+      table td, table th {
+        text-align: left;
+        padding: 10px;
+        position: relative;
+      }
+
+      table td::before {
+        content: attr(data-label);
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+
+      input[type="text"], select {
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Attendance and Task Tracker</h2>
+
+    <!-- Login Section -->
+    <div id="login-page">
+      <h3>Select Your Name</h3>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+        <button class="user-btn" onclick="loginAs('Lakmini')">Lakmini</button>
+        <button class="user-btn" onclick="loginAs('Gayan')">Gayan</button>
+        <button class="user-btn" onclick="loginAs('Yasith')">Yasith</button>
+        <button class="user-btn" onclick="loginAs('Lakshani')">Lakshani</button>
+      </div>
+    </div>
+
+    <!-- User Page -->
+    <div id="user-page" class="hidden">
+      <h3 id="greeting"></h3>
+
+      <label>Select Month:</label>
+      <select id="monthSelect" onchange="renderTable()">
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4" selected>April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <button class="btn" onclick="Back()">Back</button>
+
+      <div id="attendance-table"></div>
+      <button class="btn" onclick="exportToExcel()">Export to Excel</button>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = "";
+    let userData = JSON.parse(localStorage.getItem("userData") || "{}");
+
+    function loginAs(name) {
+      currentUser = name;
+      if (!userData[name]) {
+        userData[name] = { attendance: {}, tasks: {} };
+      }
+      document.getElementById("login-page").classList.add("hidden");
+      document.getElementById("user-page").classList.remove("hidden");
+      document.getElementById("greeting").textContent = `Welcome, ${name}!`;
+      renderTable();
+    }
+
+    function Back() {
+      currentUser = "";
+      document.getElementById("user-page").classList.add("hidden");
+      document.getElementById("login-page").classList.remove("hidden");
+    }
+
+    function renderTable() {
+      const selectedMonth = parseInt(document.getElementById("monthSelect").value);
+      const daysInMonth = new Date(new Date().getFullYear(), selectedMonth, 0).getDate();
+      const tableContainer = document.getElementById("attendance-table");
+
+      let table = `<table><tr><th>Date</th><th>Status</th><th>Task</th></tr>`;
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateObj = new Date(new Date().getFullYear(), selectedMonth - 1, i);
+        const fullDate = dateObj.toLocaleDateString();
+        const shortDate = dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+
+        const status = userData[currentUser].attendance[shortDate] || "";
+        const task = userData[currentUser].tasks[shortDate]?.join(" | ") || "";
+        const statusClass = status === "present" ? "present" : status === "absent" ? "absent" : "none";
+
+        table += `<tr>
+          <td data-label="Date">${fullDate}</td>
+          <td data-label="Status">
+            <select class="${statusClass}" onchange="setAttendance('${shortDate}', this.value)">
+              <option value="">--</option>
+              <option value="present" ${status === "present" ? "selected" : ""}>Present</option>
+              <option value="absent" ${status === "absent" ? "selected" : ""}>Absent</option>
+            </select>
+          </td>
+          <td data-label="Task">
+            <input type="text" value="${task}" placeholder=" " oninput="saveTask('${shortDate}', this.value)" style="width: 95%;" />
+          </td>
+        </tr>`;
+      }
+      table += "</table>";
+      tableContainer.innerHTML = table;
+    }
+
+    function setAttendance(date, value) {
+      userData[currentUser].attendance[date] = value;
+      saveData();
+      renderTable();
+    }
+
+    function saveTask(date, value) {
+      if (!userData[currentUser].tasks[date]) {
+        userData[currentUser].tasks[date] = [];
+      }
+      userData[currentUser].tasks[date] = value ? [value] : [];
+      saveData();
+    }
+
+    function saveData() {
+      localStorage.setItem("userData", JSON.stringify(userData));
+    }
+
+    function exportToExcel() {
+      const selectedMonth = parseInt(document.getElementById("monthSelect").value);
+      const monthName = document.getElementById("monthSelect").options[selectedMonth - 1].text;
+      const currentYear = new Date().getFullYear();
+
+      const user = currentUser;
+      const data = [];
+
+      for (let i = 1; i <= 31; i++) {
+        const dateObj = new Date(currentYear, selectedMonth - 1, i);
+        if (dateObj.getMonth() !== selectedMonth - 1) break;
+
+        const formattedDate = dateObj.toLocaleDateString("en-GB");
+        const shortDate = dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+
+        const attendance = userData[user].attendance[shortDate] || "";
+        const tasks = userData[user].tasks[shortDate]?.join(" | ") || "";
+
+        data.push({
+          Date: formattedDate,
+          Attendance: attendance.charAt(0).toUpperCase() + attendance.slice(1),
+          Tasks: tasks
+        });
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, `${monthName}_${user}`);
+      XLSX.writeFile(workbook, `${user}_Attendance_${monthName}_${currentYear}.xlsx`);
+    }
+  </script>
+</body>
+</html>
