@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,12 +9,12 @@
     body {
       font-family: 'Arial', sans-serif;
       margin: 20px;
-      background-color: #8db1d665;
+      background-color: #d7e9f7;
       color: #333;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1000px;
       margin: auto;
       background-color: #fff;
       padding: 20px;
@@ -21,16 +22,9 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    h2 {
+    h2, h3 {
       text-align: center;
       color: #4CAF50;
-    }
-
-    #login-page, #user-page {
-      padding: 20px;
-      background-color: #f9f9f9;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     .user-btn {
@@ -130,7 +124,6 @@
       padding: 6px;
     }
 
-    /* MOBILE RESPONSIVE STYLES */
     @media (max-width: 768px) {
       .container {
         padding: 10px;
@@ -140,11 +133,6 @@
         width: 100%;
         font-size: 16px;
         padding: 15px;
-      }
-
-      #login-page h3,
-      #user-page h3 {
-        font-size: 20px;
       }
 
       table, thead, tbody, th, td, tr {
@@ -172,10 +160,6 @@
         white-space: nowrap;
       }
 
-      input[type="text"], select {
-        width: 100%;
-      }
-
       .btn {
         width: 100%;
         font-size: 14px;
@@ -187,7 +171,7 @@
   <div class="container">
     <h2>Attendance and Task Tracker</h2>
 
-    <!-- Login Section -->
+    <!-- Login Page -->
     <div id="login-page">
       <h3>Select Your Name</h3>
       <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
@@ -196,6 +180,26 @@
         <button class="user-btn" onclick="loginAs('Yasith')">Yasith</button>
         <button class="user-btn" onclick="loginAs('Lakshani')">Lakshani</button>
       </div>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <label><strong>Select Month:</strong></label>
+        <select id="overviewMonthSelect" onchange="renderOverview()">
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4" selected>April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+
+      <div id="overview-table"></div>
     </div>
 
     <!-- User Page -->
@@ -243,6 +247,7 @@
       currentUser = "";
       document.getElementById("user-page").classList.add("hidden");
       document.getElementById("login-page").classList.remove("hidden");
+      renderOverview();
     }
 
     function renderTable() {
@@ -285,9 +290,6 @@
     }
 
     function saveTask(date, value) {
-      if (!userData[currentUser].tasks[date]) {
-        userData[currentUser].tasks[date] = [];
-      }
       userData[currentUser].tasks[date] = value ? [value] : [];
       saveData();
     }
@@ -326,6 +328,46 @@
       XLSX.utils.book_append_sheet(workbook, worksheet, `${monthName}_${user}`);
       XLSX.writeFile(workbook, `${user}_Attendance_${monthName}_${currentYear}.xlsx`);
     }
+
+    function renderOverview() {
+      const overviewContainer = document.getElementById("overview-table");
+      const selectedMonth = parseInt(document.getElementById("overviewMonthSelect").value);
+      const daysInMonth = new Date(new Date().getFullYear(), selectedMonth, 0).getDate();
+
+      const users = ["Lakmini", "Yasith", "Gayan", "Lakshani"];
+      let table = `<h3>Overview for ${new Date(2023, selectedMonth - 1).toLocaleString('en-US', { month: 'long' })}</h3>`;
+      table += `<table><tr><th>Date</th>`;
+      users.forEach(user => {
+        table += `<th>${user}</th>`;
+      });
+      table += `</tr>`;
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateObj = new Date(new Date().getFullYear(), selectedMonth - 1, i);
+        const fullDate = dateObj.toLocaleDateString();
+        const shortDate = dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+
+        table += `<tr><td><strong>${fullDate}</strong></td>`;
+        users.forEach(user => {
+          const status = userData[user]?.attendance?.[shortDate] || "--";
+          const task = userData[user]?.tasks?.[shortDate]?.join(" | ") || "";
+          const display = `${status.charAt(0).toUpperCase()  }`;
+const statusClass = status === "present" ? "present" : status === "absent" ? "absent" : "none";
+
+const showTask = task ? `alert('Task: ${task.replace(/'/g, "\\'")}');` : `alert('No task recorded.');`;
+
+table += `<td class="${statusClass}" style="cursor:pointer;" onclick="${showTask}">${display || '--'}</td>`;
+
+        });
+        table += `</tr>`;
+      }
+
+      table += `</table>`;
+      overviewContainer.innerHTML = table;
+    }
+
+    // Initial overview render
+    renderOverview();
   </script>
 </body>
 </html>
